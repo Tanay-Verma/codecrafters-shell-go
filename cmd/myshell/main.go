@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -30,12 +31,13 @@ func repl() {
 
 		if command == "exit" && len(args) == 1 {
 			if args[0] == "0" {
-				os.Exit(0)
+				i, _ := strconv.Atoi(args[0])
+				os.Exit(i)
 			}
 		}
 		if command == "echo" {
 			fmt.Fprintln(os.Stdout, strings.Join(args, " "))
-			return;
+			return
 		}
 		op := fmt.Sprintf("%s: command not found", command)
 
