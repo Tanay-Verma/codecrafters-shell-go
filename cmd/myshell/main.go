@@ -7,6 +7,12 @@ import (
 )
 
 func main() {
+	for {
+		repl();
+	}
+}
+
+func repl() {
 	fmt.Fprint(os.Stdout, "$ ")
 
 	// Wait for user input
