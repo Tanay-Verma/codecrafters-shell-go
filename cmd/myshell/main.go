@@ -14,6 +14,8 @@ func main() {
 	}
 }
 
+var builtinCommands = map[string]bool{"echo": true, "exit": true, "type": true}
+
 func repl() {
 	fmt.Fprint(os.Stdout, "$ ")
 
@@ -29,18 +31,34 @@ func repl() {
 		command := inputArr[0]
 		args := inputArr[1:]
 
-		if command == "exit" && len(args) == 1 {
-			if args[0] == "0" {
-				i, _ := strconv.Atoi(args[0])
-				os.Exit(i)
+		switch command {
+		case "exit":
+			if len(args) == 1 {
+				i, err := strconv.Atoi(args[0])
+				if err != nil {
+				} else {
+					os.Exit(i)
+				}
 			}
-		}
-		if command == "echo" {
+		case "echo":
 			fmt.Fprintln(os.Stdout, strings.Join(args, " "))
 			return
+		case "type":
+			if len(args) == 1 {
+				command = args[0]
+				if builtinCommands[command] {
+					op := fmt.Sprintf("%s is a shell builtin", command)
+					fmt.Fprintln(os.Stdout, op)
+					return
+				} else {
+					op := fmt.Sprintf("%s not found", command)
+					fmt.Fprintln(os.Stdout, op)
+					return
+				}
+			}
+		default:
+			op := fmt.Sprintf("%s: command not found", command)
+			fmt.Fprintln(os.Stdout, op)
 		}
-		op := fmt.Sprintf("%s: command not found", command)
-
-		fmt.Fprintln(os.Stdout, op)
 	}
 }
