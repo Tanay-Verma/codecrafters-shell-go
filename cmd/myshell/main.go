@@ -6,10 +6,15 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
+
+var builtinCommands map[string]func([]string)
+
+func init() {
+	builtinCommands = map[string]func([]string){"echo": echo, "exit": exit, "type": typeCommand, "pwd": pwd, "cd": cd}
+}
 
 func main() {
 	for {
@@ -17,96 +22,102 @@ func main() {
 	}
 }
 
-var builtinCommands = map[string]bool{"echo": true, "exit": true, "type": true, "pwd": true, "cd": true}
-
 func repl() {
 	fmt.Fprint(os.Stdout, "$ ")
 
 	// Wait for user input
 	input, err := (bufio.NewReader(os.Stdin).ReadString('\n'))
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error reading input:", err)
+		return
 	}
 
-	input = strings.Trim(input, "\n")
-
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return
+	}
 	// removing the "/n" from the end of the command and storing the formatted string
 	inputArr := strings.Split(input, " ")
 	command := inputArr[0]
 	args := inputArr[1:]
 
-	executeCommand(command, args)
+	if handler, exists := builtinCommands[command]; exists {
+		handler(args)
+	} else {
+		executeExternalCommand(command, args)
+	}
 }
 
-func executeCommand(command string, args []string) {
-	switch command {
-	case "exit":
-		if len(args) == 1 {
-			exitCode, err := strconv.Atoi(args[0])
-			if err != nil {
-				log.Fatal("Invalid exit code")
-			} else {
-				os.Exit(exitCode)
-			}
-		}
-	case "echo":
-		fmt.Fprintln(os.Stdout, strings.Join(args, " "))
-		return
-	case "type":
-		if len(args) == 1 {
-			argsCommand := args[0]
-			if builtinCommands[argsCommand] {
-				op := fmt.Sprintf("%s is a shell builtin", argsCommand)
-				fmt.Fprintln(os.Stdout, op)
-			} else {
-				paths := strings.Split(os.Getenv("PATH"), ":")
-				for _, path := range paths {
-					fp := filepath.Join(path, argsCommand)
-					_, err := os.Stat(fp)
+func echo(args []string) {
+	fmt.Fprintln(os.Stdout, strings.Join(args, " "))
+}
 
-					if err == nil {
-						fmt.Fprintln(os.Stdout, argsCommand+" is "+fp)
-						return
-					}
-				}
-				op := fmt.Sprintf("%s: not found", argsCommand)
-				fmt.Fprintln(os.Stdout, op)
-			}
-		}
-	case "pwd":
-		if len(args) == 0 {
-			dir, err := os.Getwd()
-			if err != nil {
-				log.Fatal(err)
-			} else {
-				fmt.Fprintln(os.Stdout, dir)
-			}
-		}
-	case "cd":
-		if len(args) == 1 {
-			fileInfo, err := os.Stat(args[0])
-			if err != nil {
-				if os.IsNotExist(err) {
-					fmt.Fprintln(os.Stdout, args[0]+": No such file or directory")
-					return
-				}
-			}
-			if fileInfo.IsDir() {
-				os.Chdir(args[0])
-			}
-		}
-	default:
-		_, err := os.Stat(command)
+func pwd(args []string) {
+	if len(args) != 0 {
+		log.Println("Usage pwd")
+		return
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Println("Error get current directory:", err)
+		return
+	}
+	fmt.Fprintln(os.Stdout, dir)
+}
+
+func cd(args []string) {
+	if len(args) != 1 {
+		log.Println("Usage: cd <directory>")
+		return
+	}
+	err := os.Chdir(args[0])
+	if err != nil {
+		fmt.Fprintln(os.Stdout, args[0]+": No such file or directory")
+	}
+}
+
+func exit(args []string) {
+	if len(args) != 1 {
+		log.Println("Usage: exit <exit code>")
+		return
+	}
+	exitCode, err := strconv.Atoi(args[0])
+	if err != nil {
+		log.Fatal("Invalid exit code")
+		return
+	}
+	os.Exit(exitCode)
+}
+
+func typeCommand(args []string) {
+	if len(args) != 1 {
+		log.Println("Usage: type <command>")
+		return
+	}
+	argsCommand := args[0]
+	if _, exists := builtinCommands[argsCommand]; exists {
+		op := fmt.Sprintf("%s is a shell builtin", argsCommand)
+		fmt.Fprintln(os.Stdout, op)
+	} else {
+		path, err := exec.LookPath(argsCommand)
 		if err != nil {
-			op := fmt.Sprintf("%s: command not found", command)
-			fmt.Fprintln(os.Stdout, op)
+			fmt.Fprintln(os.Stdout, argsCommand+": not found")
 		} else {
-			op, err := exec.Command(command, args...).Output()
-			if err != nil {
-				log.Fatal(err)
-			}
-			fmt.Fprintln(os.Stdout, strings.Trim(string(op[:]), "\n"))
+			fmt.Fprintln(os.Stdout, argsCommand+" is "+path)
+		}
+	}
+}
+
+func executeExternalCommand(command string, args []string) {
+	cmd := exec.Command(command, args...)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+
+	err := cmd.Run()
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
 			return
 		}
+		fmt.Fprintln(os.Stdout, command+": command not found")
 	}
 }
