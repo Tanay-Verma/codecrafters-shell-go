@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -73,7 +74,18 @@ func executeCommand(command string, args []string) {
 			}
 		}
 	default:
-		op := fmt.Sprintf("%s: command not found", command)
-		fmt.Fprintln(os.Stdout, op)
+		_, err := os.Stat(command)
+		if err != nil {
+			op := fmt.Sprintf("%s: command not found", command)
+			fmt.Fprintln(os.Stdout, op)
+		} else {
+			op, err := exec.Command(command, args...).Output()
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Fprintln(os.Stdout, strings.Trim(string(op[:]), "\n"))
+			return
+
+		}
 	}
 }
