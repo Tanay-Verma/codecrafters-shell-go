@@ -17,7 +17,7 @@ func main() {
 	}
 }
 
-var builtinCommands = map[string]bool{"echo": true, "exit": true, "type": true}
+var builtinCommands = map[string]bool{"echo": true, "exit": true, "type": true, "pwd": true}
 
 func repl() {
 	fmt.Fprint(os.Stdout, "$ ")
