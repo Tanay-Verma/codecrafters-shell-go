@@ -59,7 +59,7 @@ func pwd(args []string) {
 	}
 	dir, err := os.Getwd()
 	if err != nil {
-		log.Println("Error get current directory:", err)
+		log.Println("Error getting current directory:", err)
 		return
 	}
 	fmt.Fprintln(os.Stdout, dir)
@@ -69,6 +69,9 @@ func cd(args []string) {
 	if len(args) != 1 {
 		log.Println("Usage: cd <directory>")
 		return
+	}
+	if args[0] == "~" {
+		args[0] = os.Getenv("HOME")
 	}
 	err := os.Chdir(args[0])
 	if err != nil {
@@ -83,7 +86,7 @@ func exit(args []string) {
 	}
 	exitCode, err := strconv.Atoi(args[0])
 	if err != nil {
-		log.Fatal("Invalid exit code")
+		log.Println("Invalid exit code")
 		return
 	}
 	os.Exit(exitCode)
