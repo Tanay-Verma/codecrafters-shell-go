@@ -73,6 +73,15 @@ func executeCommand(command string, args []string) {
 				fmt.Fprintln(os.Stdout, op)
 			}
 		}
+	case "pwd":
+		if len(args) == 0 {
+			dir, err := os.Getwd()
+			if err != nil {
+				log.Fatal(err)
+			} else {
+				fmt.Fprintln(os.Stdout, dir)
+			}
+		}
 	default:
 		_, err := os.Stat(command)
 		if err != nil {
