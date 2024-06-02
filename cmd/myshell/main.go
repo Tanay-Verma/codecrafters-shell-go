@@ -71,7 +71,7 @@ func cd(args []string) {
 		return
 	}
 	if args[0] == "~" {
-		args[0] = os.Getenv("HOME")
+		args[0] =strings.Replace(args[0], "~", os.Getenv("HOME"),1)
 	}
 	err := os.Chdir(args[0])
 	if err != nil {
