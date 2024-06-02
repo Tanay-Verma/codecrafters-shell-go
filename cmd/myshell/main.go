@@ -17,7 +17,7 @@ func main() {
 	}
 }
 
-var builtinCommands = map[string]bool{"echo": true, "exit": true, "type": true, "pwd": true}
+var builtinCommands = map[string]bool{"echo": true, "exit": true, "type": true, "pwd": true, "cd": true}
 
 func repl() {
 	fmt.Fprint(os.Stdout, "$ ")
@@ -82,6 +82,19 @@ func executeCommand(command string, args []string) {
 				fmt.Fprintln(os.Stdout, dir)
 			}
 		}
+	case "cd":
+		if len(args) == 1 {
+			fileInfo, err := os.Stat(args[0])
+			if err != nil {
+				if os.IsNotExist(err) {
+					fmt.Fprintln(os.Stdout, args[0]+": No such file or directory")
+					return
+				}
+			}
+			if fileInfo.IsDir() {
+				os.Chdir(args[0])
+			}
+		}
 	default:
 		_, err := os.Stat(command)
 		if err != nil {
@@ -94,7 +107,6 @@ func executeCommand(command string, args []string) {
 			}
 			fmt.Fprintln(os.Stdout, strings.Trim(string(op[:]), "\n"))
 			return
-
 		}
 	}
 }
