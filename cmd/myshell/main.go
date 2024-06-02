@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -21,44 +23,57 @@ func repl() {
 
 	// Wait for user input
 	input, err := (bufio.NewReader(os.Stdin).ReadString('\n'))
-	input = strings.Trim(input, "\n")
 	if err != nil {
-		fmt.Fprintln(os.Stdout, err)
-	} else {
-		// removing the "/n" from the end of the command and storing the formatted string
+		log.Fatal(err)
+	}
 
-		inputArr := strings.Split(input, " ")
-		command := inputArr[0]
-		args := inputArr[1:]
+	input = strings.Trim(input, "\n")
 
-		switch command {
-		case "exit":
-			if len(args) == 1 {
-				i, err := strconv.Atoi(args[0])
-				if err != nil {
-				} else {
-					os.Exit(i)
-				}
+	// removing the "/n" from the end of the command and storing the formatted string
+	inputArr := strings.Split(input, " ")
+	command := inputArr[0]
+	args := inputArr[1:]
+
+	executeCommand(command, args)
+}
+
+func executeCommand(command string, args []string) {
+	switch command {
+	case "exit":
+		if len(args) == 1 {
+			exitCode, err := strconv.Atoi(args[0])
+			if err != nil {
+				log.Fatal("Invalid exit code")
+			} else {
+				os.Exit(exitCode)
 			}
-		case "echo":
-			fmt.Fprintln(os.Stdout, strings.Join(args, " "))
-			return
-		case "type":
-			if len(args) == 1 {
-				command = args[0]
-				if builtinCommands[command] {
-					op := fmt.Sprintf("%s is a shell builtin", command)
-					fmt.Fprintln(os.Stdout, op)
-					return
-				} else {
-					op := fmt.Sprintf("%s not found", command)
-					fmt.Fprintln(os.Stdout, op)
-					return
-				}
-			}
-		default:
-			op := fmt.Sprintf("%s: command not found", command)
-			fmt.Fprintln(os.Stdout, op)
 		}
+	case "echo":
+		fmt.Fprintln(os.Stdout, strings.Join(args, " "))
+		return
+	case "type":
+		if len(args) == 1 {
+			argsCommand := args[0]
+			if builtinCommands[argsCommand] {
+				op := fmt.Sprintf("%s is a shell builtin", argsCommand)
+				fmt.Fprintln(os.Stdout, op)
+			} else {
+				paths := strings.Split(os.Getenv("PATH"), ":")
+				for _, path := range paths {
+					fp := filepath.Join(path, argsCommand)
+					_, err := os.Stat(fp)
+
+					if err == nil {
+						fmt.Fprintln(os.Stdout, argsCommand+" is "+fp)
+						return
+					}
+				}
+				op := fmt.Sprintf("%s: not found", argsCommand)
+				fmt.Fprintln(os.Stdout, op)
+			}
+		}
+	default:
+		op := fmt.Sprintf("%s: command not found", command)
+		fmt.Fprintln(os.Stdout, op)
 	}
 }
